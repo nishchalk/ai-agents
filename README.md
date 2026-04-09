@@ -1,11 +1,29 @@
-# Java AI Agents — Setup Guide
+# Java AI Agents — Setup Guide (GitHub Copilot)
 
-Two AI agent skills for Java/Maven projects:
+Two AI agent configurations for Java/Maven projects:
 
-| Skill | What it does |
-|-------|-------------|
-| **java-project-agent** | Interviews you about your project and generates a `PROJECT-AGENT.md` instruction file for any AI agent |
-| **java-peer-review** | Performs a structured, severity-labelled peer review of Java code changes |
+| Agent | Copilot mechanism | What it does |
+|-------|------------------|-------------|
+| **java-project-agent** | `.github/copilot-instructions.md` | Always-on project context loaded automatically into every Copilot chat |
+| **java-peer-review** | `.github/prompts/java-peer-review.prompt.md` | On-demand peer review prompt invoked from Copilot Chat |
+
+> **Cursor user?** See the original Cursor setup guide in the `SKILL.md` files
+> under `java-project-agent/` and `java-peer-review/`.
+
+---
+
+## How Copilot instructions work
+
+GitHub Copilot has no "skills" directory. It uses two mechanisms instead:
+
+| Mechanism | File location | Scope | Loaded |
+|-----------|--------------|-------|--------|
+| Repository instructions | `.github/copilot-instructions.md` | Whole repo | Automatically on every chat |
+| Prompt files | `.github/prompts/*.prompt.md` | Per prompt | On-demand — you reference them in chat |
+| User instructions | VS Code settings (JSON) | All your repos | Always |
+
+The **project agent** maps to repository instructions (always-on context).  
+The **peer review agent** maps to a reusable prompt file (invoked when needed).
 
 ---
 
@@ -13,65 +31,77 @@ Two AI agent skills for Java/Maven projects:
 
 | Tool | Minimum version | Check |
 |------|----------------|-------|
-| [Cursor IDE](https://cursor.com) | 0.40+ | `cursor --version` |
+| [VS Code](https://code.visualstudio.com) | 1.90+ | `code --version` |
+| [GitHub Copilot extension](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) | latest | Extensions panel |
+| GitHub Copilot subscription | Individual, Business, or Enterprise | [github.com/settings/copilot](https://github.com/settings/copilot) |
 | Java | 11 LTS (17 or 21 recommended) | `java -version` |
 | Maven | 3.8+ | `mvn -version` |
 | Git | any | `git --version` |
+
+Enable prompt files in VS Code settings (required for the peer review agent):
+
+```json
+// .vscode/settings.json  OR  user settings.json
+{
+  "chat.promptFiles": true
+}
+```
 
 ---
 
 ## Installation
 
-### Option A — Personal (you only)
+### Step 1 — Create the Copilot directory structure
 
-Copy both skill directories into your personal Cursor skills folder.
-They will be available in **every project** you open.
+Run this once at the root of your Java project:
 
 ```bash
-# from this directory
-cp -r java-project-agent  ~/.cursor/skills/
-cp -r java-peer-review    ~/.cursor/skills/
+mkdir -p .github/prompts
 ```
 
-### Option B — Project / Team (recommended for teams)
-
-Commit the skill directories into your repository so every contributor gets
-them automatically.
+### Step 2 — Copy the instruction files
 
 ```bash
-# from your repo root
-mkdir -p .cursor/skills
+# Copy repository-level instructions (project agent)
+cp path/to/java-project-agent/copilot-instructions.md  .github/copilot-instructions.md
 
-cp -r path/to/java-project-agent  .cursor/skills/
-cp -r path/to/java-peer-review    .cursor/skills/
+# Copy the peer review prompt
+cp path/to/java-peer-review/java-peer-review.prompt.md  .github/prompts/java-peer-review.prompt.md
+```
 
-git add .cursor/skills
-git commit -m "chore: add Java AI agent skills"
+### Step 3 — Commit both files
+
+```bash
+git add .github/
+git commit -m "chore: add GitHub Copilot Java agent instructions"
 git push
 ```
 
-> Cursor auto-discovers skills in both `~/.cursor/skills/` and `.cursor/skills/`
-> in the open workspace. No further configuration needed.
+Every contributor who clones the repo and has Copilot installed gets both
+agents with no extra steps.
 
 ---
 
 ## First-time project setup
 
-### Step 1 — Open your Java project in Cursor
+### Step 1 — Open your Java project in VS Code
 
 ```
 File → Open Folder → select your project root (where pom.xml lives)
 ```
 
-### Step 2 — Invoke the project agent
+### Step 2 — Generate your project instructions
 
-In Cursor chat, type:
+Open Copilot Chat (`Ctrl+Shift+I` / `Cmd+Shift+I`) and paste:
 
 ```
-Set up the Java project agent for this project
+I want to set up GitHub Copilot instructions for this Java/Maven project.
+Please ask me the following questions one by one, then generate a
+.github/copilot-instructions.md file based on my answers.
+Reference #file:pom.xml for build context.
 ```
 
-The agent will ask you **9 questions** to understand your project:
+Copilot will ask you **9 questions** to understand your project:
 
 | # | Question | Why it matters |
 |---|----------|---------------|
@@ -85,40 +115,53 @@ The agent will ask you **9 questions** to understand your project:
 | 8 | Off-limits areas | Generated code, legacy modules, vendor dirs |
 | 9 | Deployment target | Docker/K8s, Lambda, bare metal |
 
-### Step 3 — Review the generated file
+### Step 3 — Save and verify the generated file
 
-The agent creates `PROJECT-AGENT.md` at your project root. Open it and:
+Copilot writes `.github/copilot-instructions.md`. Open it and:
 
-- Correct anything the agent inferred incorrectly from `pom.xml`
+- Correct anything inferred incorrectly from `pom.xml`
 - Add project-specific conventions not covered by the defaults
-- Commit it alongside your code
+- Commit it
 
 ```bash
-git add PROJECT-AGENT.md
-git commit -m "docs: add PROJECT-AGENT.md for AI agent guidance"
+git add .github/copilot-instructions.md
+git commit -m "docs: add Copilot project instructions"
 ```
 
-From this point on, any AI agent working on the project will load
-`PROJECT-AGENT.md` automatically and follow your project's rules.
+From this point Copilot **automatically** loads `.github/copilot-instructions.md`
+at the start of every chat session in this repository — no manual referencing needed.
 
 ---
 
 ## Running a peer review
 
-In Cursor chat, type:
+Open Copilot Chat and reference the prompt file:
 
 ```
-Review these changes  [or]  Do a peer review of PR #42
+#file:.github/prompts/java-peer-review.prompt.md
+
+Review the changes in #file:src/main/java/com/example/PaymentService.java
 ```
 
-The peer review agent will ask **4 scoping questions**:
+Or use the **prompt picker**: type `/` in Copilot Chat and select
+`java-peer-review` from the list.
+
+The prompt will ask **4 scoping questions**:
 
 | # | Question |
 |---|----------|
 | 1 | What is being reviewed? (files, diff, PR number) |
-| 2 | Is there a `PROJECT-AGENT.md` to load for context? |
-| 3 | Any areas to focus on? (security, performance, tests…) |
-| 4 | Any known trade-offs or constraints to be aware of? |
+| 2 | Are there any areas to focus on? (security, performance, tests…) |
+| 3 | Any known trade-offs or legacy constraints to be aware of? |
+| 4 | Should the review apply strict or relaxed standards? |
+
+### To review a pull request
+
+```
+#file:.github/prompts/java-peer-review.prompt.md
+
+Review the diff for PR #42. Use @github to fetch the PR details.
+```
 
 ### Understanding the output
 
@@ -131,71 +174,78 @@ The peer review agent will ask **4 scoping questions**:
 ```
 
 **Merge policy (balanced mode):** A PR is merge-ready when there are
-zero 🔴 CRITICAL and zero 🟠 MAJOR items open. MINOR and NIT items
-are the author's discretion.
+zero 🔴 CRITICAL and zero 🟠 MAJOR items open. MINOR and NIT are the
+author's discretion.
+
+---
+
+## Optional — personal user-level instructions
+
+To apply Java standards across **all** your repositories (not just this one),
+add user-level instructions in VS Code:
+
+```json
+// settings.json  (Cmd+Shift+P → "Open User Settings JSON")
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "text": "Always follow Java best practices: constructor injection over field injection, SLF4J over System.out, try-with-resources for closeables, Optional instead of null returns, and immutable collections."
+    }
+  ]
+}
+```
 
 ---
 
 ## Typical daily workflow
 
 ```
-1. Write / change code
+1. Write / change code in VS Code
           ↓
-2. Ask peer-review agent to review the diff
+2. Open Copilot Chat — project instructions auto-loaded
           ↓
-3. Fix any CRITICAL / MAJOR findings
+3. Reference peer review prompt → ask for review of changed files
           ↓
-4. Commit and push
+4. Fix any CRITICAL / MAJOR findings
           ↓
-5. CI runs mvn verify (green required)
+5. Commit and push
           ↓
-6. Team member or agent does final review → Approve
+6. CI runs mvn verify (green required)
+          ↓
+7. Team member or Copilot does final review → Approve
 ```
 
 ---
 
 ## Sharing with your team
 
-### Via the repository (recommended)
+The entire setup lives in `.github/` — just commit it.
 
 ```
 your-repo/
-└── .cursor/
-    └── skills/
-        ├── java-project-agent/
-        │   ├── SKILL.md
-        │   └── JAVA-STANDARDS.md
-        └── java-peer-review/
-            └── SKILL.md
+└── .github/
+    ├── copilot-instructions.md        ← project agent (auto-loaded)
+    └── prompts/
+        └── java-peer-review.prompt.md ← peer review agent (on-demand)
 ```
 
-Commit this structure. Every developer who clones the repo and opens it in
-Cursor gets both skills with no extra steps.
-
-### Via a shared link / archive
-
-```bash
-# Create a zip to send to a colleague
-zip -r java-agents.zip java-project-agent java-peer-review JAVA-AGENTS-SETUP.md
-
-# Recipient unzips and copies skills to their personal folder
-unzip java-agents.zip
-cp -r java-project-agent java-peer-review ~/.cursor/skills/
-```
+Every developer who clones the repo gets both agents automatically.
+No extensions to install beyond GitHub Copilot itself.
 
 ---
 
-## Updating the skills
+## Updating the instructions
 
-Skills are plain markdown files — edit them like any other file.
+Both files are plain markdown — edit them directly.
 
 ```bash
-# Personal update
-code ~/.cursor/skills/java-project-agent/SKILL.md
+# Update project instructions
+code .github/copilot-instructions.md
 
-# Project update
-code .cursor/skills/java-peer-review/SKILL.md
-git add .cursor/skills && git commit -m "chore: update peer review checklist"
+# Update peer review prompt
+code .github/prompts/java-peer-review.prompt.md
+
+git add .github/ && git commit -m "chore: update Copilot Java instructions"
 ```
 
 ---
@@ -204,27 +254,38 @@ git add .cursor/skills && git commit -m "chore: update peer review checklist"
 
 | Symptom | Fix |
 |---------|-----|
-| Agent doesn't seem to know the skill | Restart Cursor; skills are loaded at startup |
-| Agent ignores `PROJECT-AGENT.md` | Explicitly mention it: "Follow the rules in PROJECT-AGENT.md" |
-| Review is too verbose | Ask: "Give me only CRITICAL and MAJOR findings" |
-| Review is too lenient | Ask: "Review strictly, flag any deviation from Java best practices" |
-| Skill not found in `.cursor/skills/` | Verify the directory contains a `SKILL.md` with valid YAML frontmatter |
+| Copilot ignores project instructions | Verify `.github/copilot-instructions.md` exists at the **repo root** (not in a subfolder) |
+| Prompt file not showing in `/` picker | Ensure `"chat.promptFiles": true` is set in VS Code settings |
+| Instructions seem stale | Copilot caches context — close and reopen the chat panel |
+| Review is too verbose | Add to your message: "List only CRITICAL and MAJOR findings" |
+| Review is too lenient | Add: "Review strictly against the Java standards in the project instructions" |
+| Copilot doesn't see `pom.xml` | Explicitly reference it in chat: `#file:pom.xml` |
+| PR review not working | Ensure the `@github` extension is enabled in Copilot Chat |
 
 ---
 
 ## File reference
 
 ```
-~/.cursor/skills/                      (personal skills root)
-├── JAVA-AGENTS-SETUP.md               ← this file
-├── java-project-agent/
-│   ├── SKILL.md                       main agent instructions
-│   └── JAVA-STANDARDS.md             detailed Java standards reference
-└── java-peer-review/
-    └── SKILL.md                       peer review agent instructions
-
-your-project/
+your-project/                             (repo root)
+├── .github/
+│   ├── copilot-instructions.md           ← project agent (always-on)
+│   └── prompts/
+│       └── java-peer-review.prompt.md    ← peer review agent (on-demand)
+├── .vscode/
+│   └── settings.json                     ← chat.promptFiles: true
 ├── pom.xml
-├── PROJECT-AGENT.md                   ← generated by java-project-agent
 └── src/
 ```
+
+---
+
+## Copilot vs Cursor — quick comparison
+
+| Feature | GitHub Copilot | Cursor |
+|---------|---------------|--------|
+| Always-on project context | `.github/copilot-instructions.md` | `PROJECT-AGENT.md` (via SKILL.md) |
+| Reusable prompt agents | `.github/prompts/*.prompt.md` | `SKILL.md` files (auto-discovered) |
+| Personal instructions | VS Code `settings.json` | `~/.cursor/skills/` |
+| Team sharing | Commit `.github/` to repo | Commit `.cursor/skills/` to repo |
+| Agent auto-invocation | Instructions always loaded; prompts manual | Skills auto-triggered by description match |
